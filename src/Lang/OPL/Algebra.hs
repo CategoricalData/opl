@@ -1,8 +1,12 @@
 module Lang.OPL.Algebra where
 
 data Term a b where
-  id :: Term a a
-  (.) :: Term b c -> Term a b -> Term a c
-  (⊗) :: Term a a' -> Term b b' -> Term (a,b) (a',b')
-  swap :: Term (a,b) -> Term (b,a)
-  rea :: Term ((a1,a2),a3) -> Term (a1,(a2,a3))
+  Id    :: Term a a
+  Split :: Term a (a,a)
+  Sink  :: Term (a,b) a
+  Swap  :: Term (a,b) (b,a)
+  Assoc :: Term ((a,b),c) (a,(b,c))
+  Loop  :: Term (a,c) (b,c) -> Term a b
+  (:∘:) :: Term b c -> Term a b -> Term a c
+  (:⊗:) :: Term a b -> Term a' b' -> Term (a,a') (b,b')
+
