@@ -14,6 +14,7 @@ Generic Terms
   - A set of things defined by (finite) recursive applications of a set of
     introduction rules.
   - For example, lists of numbers are defined inductively as:
+
         n := *numbers*
         list l := nil
                 | cons n l
@@ -29,6 +30,7 @@ Specific Terms
 * Box
   - A box is a tuple (in,out) where 'in' and 'out' are lists of types
   - Boxes look like this:
+
             ____
         A->|    |->C
            |    |
@@ -53,6 +55,7 @@ The following are described in an untyped setting for now.
 
 * Operad Combinators
   - Language syntax consists of the following terms e:
+
         e := id
            | split
            | sink
@@ -68,6 +71,7 @@ The following are described in an untyped setting for now.
   - Suitable for a shallow embedding
 * Operad Morphism Combinators
   - Language consists of the following terms e:
+
         e := id
            | split
            | sink
@@ -82,6 +86,7 @@ The following are described in an untyped setting for now.
   - Suitable for a shallow embedding
 * Operad Calculus
   - Language syntax consists of variables x, terms e and statements s:
+
         x := *variable-name*
         e := λ x. e
            | e e
@@ -100,6 +105,7 @@ The following are described in an untyped setting for now.
     + Operad internal language
     + Operad core language
   - Language syntax consists of variables x, types t, boxes b, and wirings w:
+
         x := *variable-name*
         t := Int | Bool | ...
         b := box {in=[(x:t) ...], out=[(x:t) ...]}
