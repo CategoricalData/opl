@@ -1,4 +1,4 @@
-module Lang.OPL.Calculus where
+module Lang.OPL.Calculus.Lang where
 
 -- NOTATION:
 -- -- types A and B are abstract
