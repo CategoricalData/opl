@@ -44,9 +44,10 @@ Specific Terms
 * Machine/Propagator
   - This is the algebra part. We have a functor Propagators: WiringDiagrams -> Set.
   - Machines describe some sort of computation in a specific domain.
-  - Machines are classified by boxes.
+  - Machines are classified by boxes (in other words, if X is a box, M is a machine to fill in that box iff M is an element of the set Propagators(X).
   - Boxes and wiring diagrams can be described and have semantics independent
-    of an algebra of machines.
+    of an algebra of machines; that is, the machines are dependently typed by the operad.
+
 Languages
 --------------------
 
