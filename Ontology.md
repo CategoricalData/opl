@@ -22,30 +22,31 @@ Generic Terms
 Specific Terms
 --------------------
 
-* Machine/Propagator
-  - Machines describe some sort of computation in a specific domain.
-  - Machines are classified by boxes.
-  - Boxes and wiring diagrams can be described and have semantics independent
-    of an algebra of machines.
 * Box
-  - A box is a tuple (in,out) where 'in' and 'out' are lists of types
+  - A box is a tuple (in,out) where 'in' and 'out' are unordered lists of types
   - Boxes look like this:
 
                 ____
             A->|    |->C
-               |    |
-            B->|____|->D
+               |    |->D
+            B->|____|->E
 
   - Boxes are types in a sense, in that they classify machines which compute
     over the inputs, providing values over the outputs.
 * Wiring Diagram
   - A mapping between boxes.
-  - If wiring from box A to box B, a wiring diagram is represented as a mapping
-    from (B-Out + A-In) -> (B-In + A-Out).
-* Operad
-  - A system of boxes and wiring diagrams.  Contains, in addition to wiring
-    diagrams, composition and tensor.
+  - If wiring from box X to box Y, a wiring diagram is represented as a surjective
+    function phi: (Y-Out + X-In) -> (Y-In + X-Out), such that Y-out->X-Out.
+* Operad (approximately synomymous with Symmetric Monoidal Category)
+  - The mathematical system of boxes and wiring diagrams.  Contains, in addition to wiring
+    diagrams, composition (boxes inside of boxes inside of boxes) and tensor (vertical juxtoposition     of boxes.
 
+* Machine/Propagator
+  - This is the algebra part. We have a functor Propagators: WiringDiagrams -> Set.
+  - Machines describe some sort of computation in a specific domain.
+  - Machines are classified by boxes.
+  - Boxes and wiring diagrams can be described and have semantics independent
+    of an algebra of machines.
 Languages
 --------------------
 
