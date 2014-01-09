@@ -111,8 +111,10 @@ The following are described in an untyped setting for now.
             x := *variable-name*
             t := Int | Bool | ...
             b := box {in=[(x:t) ...], out=[(x:t) ...]}
-            w := wiring {in=[(x, x) ...], out=[(x, x) ...]} : b -> b
+            w := wiring {in=[(x, x) ...], out=[(x, x) ...]} : [b ...] -> b
   - Wirings are classified (typed) by box morphisms
   - Wirings are denoted by wiring diagrams
   - No host language/logic needed to express morphisms/abstraction.
   - Not suitable for a shallow embedding (because of binders)
+  - Tensor may be problematic with naming, so for now use the operad model which allows multiple inputs.
+  - (the version with tensor and a single input is called symmetric monoidal category.)
