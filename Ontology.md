@@ -63,7 +63,7 @@ The following are described in an untyped setting for now.
                | sink
                | swap
                | assoc
-               | loop
+               | loop e
                | e ∘ e
                | e ⊗ e
   - Terms are classified (typed) by boxes.
