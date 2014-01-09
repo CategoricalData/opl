@@ -37,9 +37,26 @@ Specific Terms
   - A mapping between boxes.
   - If wiring from box X to box Y, a wiring diagram is represented as a surjective
     function phi: (Y-Out + X-In) -> (Y-In + X-Out), such that Y-out->X-Out.
-* Operad (approximately synomymous with Symmetric Monoidal Category)
-  - The mathematical system of boxes and wiring diagrams.  Contains, in addition to wiring
-    diagrams, composition (boxes inside of boxes inside of boxes) and tensor (vertical juxtoposition     of boxes.
+* Operad 
+  - The mathematical system of self-similarity.
+  - Our operad W of wiring diagrams:
+    + Objects: boxes (X-In, X-Out)
+    + Morphisms ϕ:X(1),X(2),...,X(n) -> Y are wiring diagrams, (in+out->out+in).
+    + Composition (boxes inside of boxes inside of boxes).
+  - The operad of Sets
+    + Objects: Sets S
+    + Morphisms ϕ:S(1),S(2),...,S(n) -> T are functions S(1)xS(2)x...xS(n) -> T.
+    + Composition (usual).
+
+* Operad functor
+  - Given two operads, say L and M, we can speak of a functor P:L -> M.
+    + It sends objects in L to objects in M, 
+    + it sends n-ary morphisms in L to n-ary morphisms in M, and
+    + it respects composition.
+  - When M is Set, we call P an algebra.
+  - Let L=W (wiring diagrams) and M=Sets. Then an operad functor P:W->Sets includes 
+    + A mapping that sends each box X∈W to a set S∈Set.
+    + A mapping that sends each wiring diagram ϕ to a function.
 
 * Machine/Propagator
   - This is the algebra part. We have a functor Propagators: WiringDiagrams -> Set.
