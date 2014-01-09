@@ -4,8 +4,12 @@ Definitions
 Generic Terms
 --------------------
 
-* Algebra
-  - Post fixed onto an operad (operad-algebra)
+* Operad
+  - Something that classifies a self-similarity situation.
+  - For example, an operad of boxes and wiring diagrams.
+* Operad-algebra
+  - Something of the shape classified by the operad.
+  - For example, propagators have the shape of boxes and wiring diagrams.
 * Calculus
   - Something with binders
 * Combinator
