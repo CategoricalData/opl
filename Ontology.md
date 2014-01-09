@@ -5,7 +5,7 @@ Generic Terms
 --------------------
 
 * Algebra
-  - ???
+  - Post fixed onto an operad (operad-algebra)
 * Calculus
   - Something with binders
 * Combinator
