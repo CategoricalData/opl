@@ -111,7 +111,7 @@ The following are described in an untyped setting for now.
             x := *variable-name*
             t := Int | Bool | ...
             b := box {in=[(x:t) ...], out=[(x:t) ...]}
-            w := wiring {in=[(x:t, x:t) ...], out=[(x:t , x:t) ...]} : b -> b
+            w := wiring {in=[(x, x) ...], out=[(x, x) ...]} : b -> b
   - Wirings are classified (typed) by box morphisms
   - Wirings are denoted by wiring diagrams
   - No host language/logic needed to express morphisms/abstraction.
