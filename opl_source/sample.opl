@@ -22,5 +22,5 @@ end
 wiring composition C with
   external w.d. D
   internal w.d. i1 <- D export internal box i1 as i11 , i2 as i12
-  internal w.d. i2 <- D2 export internal box i1 as i21 , i2 as i22
+  internal w.d. i2 <- D export internal box i1 as i21 , i2 as i22
 end
