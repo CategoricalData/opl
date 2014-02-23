@@ -1,8 +1,10 @@
-module Lang.OPL.TypeCheckMonad where
+module Lang.OPL.CheckMonad where
 
 import Prelude()
 import FP
-import Lang.OPL.TypeChecker
+import Lang.OPL.Check
+import System.Exit
+import Lang.OPL.Message
 
 newtype CheckMonadT m a = CheckMonadT
   { unCheckMonadT :: ReaderT CheckEnv (StateT CheckState (EitherT Message m)) a }
@@ -41,5 +43,8 @@ execCheckMonadIO :: CheckEnv -> CheckState -> CheckMonad a -> IO CheckState
 execCheckMonadIO e s aM = case execCheckMonad e s aM of
   Left m -> do
     pprintLn m
-    fail ""
+    exitFailure
   Right a -> return a
+
+execCheckMonadIO0 :: CheckMonad a -> IO CheckState
+execCheckMonadIO0 = execCheckMonadIO checkEnv0 checkState0

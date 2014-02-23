@@ -1,50 +1,12 @@
-module Lang.OPL.TypeChecker where
+module Lang.OPL.Check where
 
 import Prelude()
 import FP
-import qualified FP.Pretty as P
-import System.Console.ANSI
-import Text.Parsec (SourcePos)
 import Lang.OPL.Syntax
 import Data.Lens.Template
 import Lang.OPL.Annotated
+import Lang.OPL.Message
 import qualified Data.List as List
-
--- remember to check surjectivity (failure means 'unsafe'), possibly making
--- it optional because the math still works out without the check.
-
-type Context = [(SourcePos, String)]
-data Message = Message
-  { messagePhase :: String
-  , messageContext :: Context
-  , messageTitle :: String
-  , messageDescription :: Maybe String
-  } deriving (Eq, Ord, Show)
-
-instance Pretty Message where
-  pretty m = do
-    P.text "error during phase: " 
-    P.localConsole (mappend $ setConsoleColor Dull Magenta) $ 
-      P.string (messagePhase m)
-    P.hardLine
-    let reason = do
-          P.localConsole (mappend $ setConsoleColor Dull Red) $
-            P.string $ messageTitle m
-          case messageDescription m of
-            Nothing -> return ()
-            Just d -> do
-              P.hardLine
-              P.string d
-    (\ f -> List.foldl' f reason $ messageContext m) $ \ i (l, s) -> do
-      P.text "in " 
-      P.localConsole (mappend $ setConsoleColor Dull Cyan) $
-        P.string s 
-      P.localConsole (mappend $ setConsoleColor Dull Yellow) $ do
-        P.text " ["
-        P.string $ show l
-        P.text "]"
-      P.hardLine
-      P.space 2 >> P.align i
 
 data CheckEnv = CheckEnv
   { _phase :: String
@@ -60,8 +22,8 @@ checkEnv0 = CheckEnv
 
 data CheckState = CheckState
   { _regBoxes :: [(AName, Box)]
-  , _regWiringDiagrams :: [(AName, WiringDiagram)]
-  , _regWiringCompositions :: [(AName, WiringComposition)]
+  , _regWiringDiagrams :: [(AName, (WiringDiagram, WiringDiagramType))]
+  , _regWiringCompositions :: [(AName, (WiringComposition, WiringDiagramType))]
   , _warnings :: [Message]
   } deriving (Eq, Ord, Show)
 makeLens ''CheckState
@@ -116,7 +78,7 @@ checkNoDups :: (Check m) => [AName] -> m ()
 checkNoDups ans = do
   let ns = map stripAnnotation ans
   when (not $ allUnique ns) $
-    checkError "duplicate" $ Just $ "found in " ++ show ns
+    checkError "duplicate" $ Just $ "found in " ++ List.intercalate " " ns
 
 setEquiv :: (Ord a) => [a] -> [a] -> Bool
 setEquiv xs ys = List.sort xs == List.sort ys
@@ -133,16 +95,23 @@ checkEqual x y =
   when (not $ x == y) $
     checkError "not equal" $ Just $ "two objects should be equal " ++ show x ++ show y
 
+boxEquiv :: Box -> Box -> Bool
+boxEquiv (Box inx outx) (Box iny outy) =
+  (binderListSort inx == binderListSort iny) 
+  && (binderListSort outx == binderListSort outy)
+  where
+    binderListSort = List.sortBy (compare `on` binderName)
+
 ---------- registering checked defs ----------
 
 registerBox :: (Check m) => AName -> Box -> m ()
 registerBox n b = modifyView regBoxes $ (:) (n, b)
 
-registerWiringDiagram :: (Check m) => AName -> WiringDiagram -> m ()
-registerWiringDiagram n wd = modifyView regWiringDiagrams $ (:) (n, wd)
+registerWiringDiagram :: (Check m) => AName -> WiringDiagram -> WiringDiagramType -> m ()
+registerWiringDiagram n wd wdt = modifyView regWiringDiagrams $ (:) (n, (wd, wdt))
 
-registerWiringComposition :: (Check m) => AName -> WiringComposition -> m ()
-registerWiringComposition n wc = modifyView regWiringCompositions $ (:) (n, wc)
+registerWiringComposition :: (Check m) => AName -> WiringComposition -> WiringDiagramType -> m ()
+registerWiringComposition n wc wdt = modifyView regWiringCompositions $ (:) (n, (wc, wdt))
 
 --------------------  type checker -------------------- 
 
@@ -156,11 +125,11 @@ checkDef (BoxDef aname box) = do
   inContext "box" aname $ checkBox box
   registerBox aname box
 checkDef (WiringDiagramDef aname wd) = do
-  inContext "wiring diagram" aname $ checkWiringDiagram wd
-  registerWiringDiagram aname wd
+  wdt <- inContext "wiring diagram" aname $ checkWiringDiagram wd
+  registerWiringDiagram aname wd wdt
 checkDef (WiringCompositionDef aname wc) = do
-  inContext "wiring composition" aname $ checkWiringComposition wc
-  registerWiringComposition aname wc
+  wdt <- inContext "wiring composition" aname $ checkWiringComposition wc
+  registerWiringComposition aname wc wdt
 
 ---------- boxes ----------
 
@@ -185,6 +154,15 @@ checkBox (Box inputs outputs) = do
   forM_ all $ \ (Binder aname ttype) ->
     inContext "plug" aname $
       checkValidType ttype
+
+getBoxBinder :: (Check m) => Binder -> m BoxBinder
+getBoxBinder (Binder n t) = do
+  bs <- getView regBoxes
+  case lookup t bs of
+    Nothing ->
+      inContext "lookup" t $
+        checkError "not defined" Nothing
+    Just b -> return $ BoxBinder n b
 
 ---------- wiring diagrams ----------
 
@@ -215,7 +193,7 @@ checkValidSource validSources apath = do
         checkError "invalid" $ Just d 
       Just t -> return t
 
-checkWiringDiagram :: (Check m) => WiringDiagram -> m ()
+checkWiringDiagram :: (Check m) => WiringDiagram -> m WiringDiagramType
 checkWiringDiagram (WiringDiagram internalWirings externalWiring) = do
   let names = wiringName externalWiring : map wiringName internalWirings
       internalBinders = map wiringBinder internalWirings
@@ -224,12 +202,12 @@ checkWiringDiagram (WiringDiagram internalWirings externalWiring) = do
   -- make sure there are no duplicates in binding names
   checkNoDups names
   -- lookup box definitions
-  internalBoxBinders <- mapM getBox internalBinders
-  externalBoxBinder <- getBox externalBinder
+  internalBoxBinders <- mapM getBoxBinder internalBinders
+  externalBoxBinder <- getBoxBinder externalBinder
   let all = map reassoc $
         (External, externalBoxBinder, externalPlug) 
         : zip3 (repeat Internal) internalBoxBinders internalPlugs
-      reassoc (t, (n, b), p) = (n, (t, b, p))
+      reassoc (t, (BoxBinder n b), p) = (n, (t, b, p))
       -- valid source nodes are either an output (if internal) or input (if
       -- external) of the box.
       validSources = (\ f -> List.foldl' f [] all) $ \ i (name, (tag, box, _)) ->
@@ -270,17 +248,73 @@ checkWiringDiagram (WiringDiagram internalWirings externalWiring) = do
       [ "wirings must be surjective: no mapping for "
       , List.intercalate ", " $ map prettyPath $ validSourcePaths List.\\ mappedSourcePaths
       ]
+  return $ WiringDiagramType internalBoxBinders $ boxBinderBox externalBoxBinder
 
-getBox :: (Check m) => Binder -> m (AName, Box)
-getBox (Binder n t) = do
-  bs <- getView regBoxes
-  case lookup t bs of
+lookupWiringDiagram :: (Check m) => AName -> m (WiringDiagram, WiringDiagramType)
+lookupWiringDiagram n = do
+  wds <- getView regWiringDiagrams
+  case lookup n wds of
     Nothing ->
-      inContext "lookup" t $
+      inContext "lookup" n $
         checkError "not defined" Nothing
-    Just b -> return (n, b)
+    Just wd -> return wd
 
 ---------- wiring compositions ----------
 
-checkWiringComposition :: (Check m) => WiringComposition -> m ()
-checkWiringComposition (WiringComposition internalWds externalWd) = return ()
+renameBoxBinder :: [Mapping] -> BoxBinder -> BoxBinder
+renameBoxBinder renamings (BoxBinder name box) =
+  let newName = fromJust $ lookupMapping name renamings
+  in BoxBinder newName box
+
+checkWiringComposition :: (Check m) => WiringComposition -> m WiringDiagramType
+checkWiringComposition (WiringComposition externalWdName internalWdFillings) = do
+  -- lookup external wiring diagram definition
+  (_, externalWdType) <- lookupWiringDiagram externalWdName
+  -- the boxBinders that need filling
+  let toFill = wiringDiagramTypeInternalBoxBinders externalWdType
+      toFillNames = List.sort (map boxBinderName toFill)
+  -- the names that are filled
+  let filledNames = List.sort $ map (mappingKey . fillingMapping) internalWdFillings
+  -- check that the specified fillings match exactly
+  let filledNamesMatches = toFillNames == filledNames
+  when (not filledNamesMatches) $
+    checkError "incorrect fills" $ Just $ concat
+      [ "must provide fillings for "
+      , "wiring diagram inputs exactly: "
+      , "expected " ++ List.intercalate " " (map stripAnnotation toFillNames) ++ ", "
+      , "recieved " ++ List.intercalate " " (map stripAnnotation filledNames)
+      ]
+  -- check fillings
+  internalBoxBinders <- 
+    forM internalWdFillings $ \ (Filling (Mapping holeName holeWdName) exports) -> do
+      inContext "filling for" holeName $ do
+        -- lookup wiring diagram of filling
+        (wd, wdt) <- lookupWiringDiagram holeWdName
+        -- lookup box type of hole
+        let hole = fromJust $ lookupBoxBinder holeName toFill
+        -- check that the external box of the wiring diagram to fill matches
+        -- the hole
+        let boxMatches = boxEquiv (wiringDiagramTypeExternalBox wdt) hole
+        when (not boxMatches) $
+          checkError "incorrect fill type" Nothing {- $ Just $ concat
+            [ "hole expects box " ++ show hole ++ ", "
+            , "received " ++ show (wiringDiagramTypeExternalBox wdt)
+            ] -}
+        -- check exports sources
+        let renamed = List.sort $ map mappingKey exports
+            wdNames = List.sort $ map boxBinderName $ wiringDiagramTypeInternalBoxBinders wdt
+            renamedMatches = renamed == wdNames
+        when (not renamedMatches) $
+          checkError "incorrect renaming" $ Just $ concat
+            [ "must provide renamings for "
+            , "wiring diagram inputs exactly: "
+            , "expected " ++ List.intercalate " " (map stripAnnotation wdNames) ++ ", "
+            , "received " ++ List.intercalate " " (map stripAnnotation renamed)
+            ]
+        return $ map (renameBoxBinder exports) $ wiringDiagramTypeInternalBoxBinders wdt
+  -- check that all export targets are unique
+  let allExportTargets = map mappingValue $ concat $ map fillingExports internalWdFillings
+  when (not $ allUnique allExportTargets) $
+    checkError "duplicate export" $ Just $ 
+      "found in " ++ List.intercalate " " (map stripAnnotation allExportTargets)
+  return $ WiringDiagramType (concat internalBoxBinders) (wiringDiagramTypeExternalBox externalWdType)

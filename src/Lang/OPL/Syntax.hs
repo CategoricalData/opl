@@ -26,6 +26,13 @@ data Mapping = Mapping
   { mappingKey :: AName
   , mappingValue :: AName
   } deriving (Eq, Ord, Show)
+
+mappingToTuple :: Mapping -> (AName, AName)
+mappingToTuple (Mapping key value) = (key, value)
+
+lookupMapping :: AName -> [Mapping] -> Maybe AName
+lookupMapping n = lookup n . map mappingToTuple
+
 data Binder = Binder
   { binderName :: AName
   , binderType :: Type
@@ -61,14 +68,30 @@ data WiringDiagram = WiringDiagram
   , wiringDiagramExternalBox :: Wiring
   } deriving (Eq, Ord, Show)
 
+data BoxBinder = BoxBinder
+  { boxBinderName :: AName
+  , boxBinderBox :: Box
+  } deriving (Eq, Ord, Show)
+
+boxBinderToTuple :: BoxBinder -> (AName, Box)
+boxBinderToTuple (BoxBinder aname box) = (aname, box)
+
+lookupBoxBinder :: AName -> [BoxBinder] -> Maybe Box
+lookupBoxBinder n = lookup n . map boxBinderToTuple
+
+data WiringDiagramType = WiringDiagramType
+  { wiringDiagramTypeInternalBoxBinders :: [BoxBinder]
+  , wiringDiagramTypeExternalBox :: Box
+  } deriving (Eq, Ord, Show)
+
 data Filling = Filling
   { fillingMapping :: Mapping
   , fillingExports :: [Export]
   } deriving (Eq, Ord, Show)
 
 data WiringComposition = WiringComposition
-  { wiringCompositionExternalWd :: AName
-  , wiringCompositionInternalWds :: [Filling]
+  { wiringCompositionExternalWdName :: AName
+  , wiringCompositionInternalWdFillings :: [Filling]
   } deriving (Eq, Ord, Show)
 
 data Def =

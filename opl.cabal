@@ -32,8 +32,9 @@ library
   exposed-modules:     Lang.OPL.Lexer
                        Lang.OPL.Parser
                      , Lang.OPL.Syntax
-                     , Lang.OPL.TypeChecker
-                     , Lang.OPL.TypeCheckMonad
+                     , Lang.OPL.Check
+                     , Lang.OPL.CheckMonad
+                     , Lang.OPL.Message
                      , Lang.OPL.Annotated
   other-modules:       Util.Parsec
                      , Util.Either

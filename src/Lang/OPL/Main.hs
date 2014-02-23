@@ -6,8 +6,8 @@ import qualified Text.Parsec as P
 import Util.Parsec
 import Lang.OPL.Lexer
 import Lang.OPL.Parser
-import Lang.OPL.TypeChecker
-import Lang.OPL.TypeCheckMonad
+import Lang.OPL.Check
+import Lang.OPL.CheckMonad
 import Control.Applicative
 
 sampleFile :: FilePath
@@ -29,10 +29,12 @@ mainTypeCheck :: FilePath -> IO ()
 mainTypeCheck path = do
   input <- T.readFile path
   ds <- ioParser runParse sampleFile input
-  execCheckMonadIO checkEnv0 checkState0 $ check ds
+  execCheckMonadIO0 $ check ds
   putStrLn $ "SUCCESS"
 
 main :: IO ()
 main = do
-  [path] <- getArgs
-  mainTypeCheck path
+  args <- getArgs
+  case args of
+    [path] -> mainTypeCheck path
+    _ -> putStrLn "expecting: opl <filename>"
