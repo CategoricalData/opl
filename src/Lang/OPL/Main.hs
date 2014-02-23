@@ -29,8 +29,8 @@ mainTypeCheck :: FilePath -> IO ()
 mainTypeCheck path = do
   input <- T.readFile path
   ds <- ioParser runParse sampleFile input
-  s <- execCheckMonadIO checkEnv0 checkState0 $ check ds
-  putStrLn $ show s
+  execCheckMonadIO checkEnv0 checkState0 $ check ds
+  putStrLn $ "SUCCESS"
 
 main :: IO ()
 main = do

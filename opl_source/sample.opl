@@ -4,7 +4,7 @@ box B with
 end
 
 wiring diagram D with
-  internal box i1 : B with input x <- i2.a, y <- e.z
+  internal box i1 : B with input x <- i2.a, y <- e.y
   internal box i2 : B with input x <- e.x, y <- i1.b
   external box e : B with output a <- i1.a, b <- i2.b
 end
