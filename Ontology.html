@@ -1,0 +1,129 @@
+<h1 id="definitions">Definitions</h1>
+<h2 id="generic-terms">Generic Terms</h2>
+<ul>
+<li>Operad</li>
+<li>Something that classifies a self-similarity situation.</li>
+<li>For example, an operad of boxes and wiring diagrams.</li>
+<li>Operad-algebra</li>
+<li>Something of the shape classified by the operad.</li>
+<li>For example, propagators have the shape of boxes and wiring diagrams.</li>
+<li>Calculus</li>
+<li>Something with binders</li>
+<li>Combinator</li>
+<li>Something without binders</li>
+<li>Inductive</li>
+<li>A set of things defined by (finite) recursive applications of a set of introduction rules.</li>
+<li><p>For example, lists of numbers are defined inductively as:</p>
+<pre><code>    n := *numbers*
+    list l := nil
+            | cons n l</code></pre></li>
+</ul>
+<h2 id="specific-terms">Specific Terms</h2>
+<ul>
+<li>Box</li>
+<li>A box is a tuple (in,out) where 'in' and 'out' are unordered lists of types</li>
+<li><p>Boxes look like this:</p>
+<pre><code>        ____
+    A-&gt;|    |-&gt;C
+       |    |-&gt;D
+    B-&gt;|____|-&gt;E</code></pre></li>
+<li>Boxes are types in a sense, in that they classify machines which compute over the inputs, providing values over the outputs.</li>
+<li>Wiring Diagram</li>
+<li>A mapping between boxes.</li>
+<li>If wiring from box X to box Y, a wiring diagram is represented as a surjective function phi: (Y-Out + X-In) -&gt; (Y-In + X-Out), such that Y-out-&gt;X-Out.</li>
+<li>Operad</li>
+<li>The mathematical system of self-similarity.</li>
+<li>Our operad W of wiring diagrams:
+<ul>
+<li>Objects: boxes (X-In, X-Out)</li>
+<li>Morphisms ϕ:X(1),X(2),...,X(n) -&gt; Y are wiring diagrams, (in+out-&gt;out+in).</li>
+<li>Composition (boxes inside of boxes inside of boxes).</li>
+</ul></li>
+<li>The operad of Sets
+<ul>
+<li>Objects: Sets S</li>
+<li>Morphisms ϕ:S(1),S(2),...,S(n) -&gt; T are functions S(1)xS(2)x...xS(n) -&gt; T.</li>
+<li>Composition (usual).</li>
+</ul></li>
+<li>Operad functor</li>
+<li>Given two operads, say L and M, we can speak of a functor P:L -&gt; M.
+<ul>
+<li>It sends objects in L to objects in M,</li>
+<li>it sends n-ary morphisms in L to n-ary morphisms in M, and</li>
+<li>it respects composition.</li>
+</ul></li>
+<li>When M is Set, we call P an algebra.</li>
+<li>Let L=W (wiring diagrams) and M=Sets. Then an operad functor P:W-&gt;Sets includes
+<ul>
+<li>A mapping that sends each box X∈W to a set S∈Set.</li>
+<li>A mapping that sends each wiring diagram ϕ to a function.</li>
+</ul></li>
+<li>Machine/Propagator</li>
+<li>This is the algebra part. We have a functor Propagators: WiringDiagrams -&gt; Set.</li>
+<li>Machines describe some sort of computation in a specific domain.</li>
+<li>Machines are classified by boxes (in other words, if X is a box, M is a machine to fill in that box iff M is an element of the set Propagators(X).</li>
+<li><p>Boxes and wiring diagrams can be described and have semantics independent of an algebra of machines; that is, the machines are dependently typed by the operad.</p></li>
+</ul>
+<h2 id="languages">Languages</h2>
+<p>The following are described in an untyped setting for now.</p>
+<p>[x ...] is meta-syntax for a sequence of x 'things'.</p>
+<ul>
+<li>Operad Combinators</li>
+<li><p>Language syntax consists of the following terms e:</p>
+<pre><code>    e := id
+       | split
+       | sink
+       | swap
+       | assoc
+       | loop e
+       | e ∘ e
+       | e ⊗ e</code></pre></li>
+<li>Terms are classified (typed) by boxes.</li>
+<li>Terms are denoted by wiring diagrams which have been applied to a machine.</li>
+<li>Morphisms between terms take place in the host language/logic, or a first-order lambda could be added for abstraction.</li>
+<li>Suitable for a shallow embedding</li>
+<li>Operad Morphism Combinators</li>
+<li><p>Language consists of the following terms e:</p>
+<pre><code>    e := id
+       | split
+       | sink
+       | swap
+       | assoc
+       | loop
+       | e ∘ e
+       | e ⊗ e</code></pre></li>
+<li>Terms are classified (typed) by mappings (morphism) between boxes.</li>
+<li>Terms are denoted directly by wiring diagrams.</li>
+<li>No host language/logic needed to express morphisms/abstraction.</li>
+<li>Suitable for a shallow embedding</li>
+<li>Operad Calculus</li>
+<li><p>Language syntax consists of variables x, terms e and statements s:</p>
+<pre><code>    x := *variable-name*
+    e := λ x. e
+       | e e
+       | wire [s ...]
+    s := [x ...] &lt;- e -&lt; [x ...]
+       | loop [s ...]</code></pre></li>
+<li>Terms are classified (typed) by both boxes and box morphisms (similar to lambda calculus).</li>
+<li>wire [s ...] is denoted by applied wiring diagrams, and (λ x. e) is denoted by a wiring diagram.</li>
+<li>No host language/logic needed to express morphisms/abstraction.</li>
+<li>Not suitable for a shallow embedding (because of binders)</li>
+<li>Operad Category</li>
+<li>(presented with types)</li>
+<li>Other possible names:
+<ul>
+<li>Operad internal language</li>
+<li>Operad core language</li>
+</ul></li>
+<li><p>Language syntax consists of variables x, types t, boxes b, and wirings w:</p>
+<pre><code>    x := *variable-name*
+    t := Int | Bool | ...
+    b := box {in=[(x:t) ...], out=[(x:t) ...]}
+    w := wiring {in=[(x, x) ...], out=[(x, x) ...]} : [b ...] -&gt; b</code></pre></li>
+<li>Wirings are classified (typed) by box morphisms</li>
+<li>Wirings are denoted by wiring diagrams</li>
+<li>No host language/logic needed to express morphisms/abstraction.</li>
+<li>Not suitable for a shallow embedding (because of binders)</li>
+<li>Tensor may be problematic with naming, so for now use the operad model which allows multiple inputs.</li>
+<li><p>(the version with tensor and a single input is called symmetric monoidal category.)</p></li>
+</ul>

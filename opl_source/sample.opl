@@ -1,0 +1,16 @@
+box B with
+  input x : int, y : bool
+  output a : int, b : bool
+end
+
+wiring diagram D with
+  internal box i1 : B with input x <- i2.a, y <- e.y
+  internal box i2 : B with input x <- e.x, y <- i1.b
+  external box e : B with output a <- i1.a, b <- i2.b
+end
+
+wiring composition C with
+  external w.d. D
+  internal w.d. i1 <- D export internal box i1 as i11, i2 as i12
+  internal w.d. i1 <- D export internal box i1 as i21, i2 as i22
+end

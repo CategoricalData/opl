@@ -5,23 +5,23 @@ Generic Terms
 --------------------
 
 * Operad
-  - Something that classifies a self-similarity situation.
-  - For example, an operad of boxes and wiring diagrams.
+    - Something that classifies a self-similarity situation.
+    - For example, an operad of boxes and wiring diagrams.
 * Operad-algebra
-  - Something of the shape classified by the operad.
-  - For example, propagators have the shape of boxes and wiring diagrams.
+    - Something of the shape classified by the operad.
+    - For example, propagators have the shape of boxes and wiring diagrams.
 * Calculus
-  - Something with binders
+    - Something with binders
 * Combinator
-  - Something without binders
+    - Something without binders
 * Inductive
-  - A set of things defined by (finite) recursive applications of a set of
-    introduction rules.
-  - For example, lists of numbers are defined inductively as:
+    - A set of things defined by (finite) recursive applications of a set of
+      introduction rules.
+    - For example, lists of numbers are defined inductively as:
 
-            n := *numbers*
-            list l := nil
-                    | cons n l
+              n := *numbers*
+              list l := nil
+                      | cons n l
 
 Specific Terms
 --------------------

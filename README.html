@@ -1,0 +1,26 @@
+<h1 id="opl">OPL</h1>
+<p>Operad Programming Language (OPL) is the language of wiring.</p>
+<h2 id="current-status">Current Status</h2>
+<ul>
+<li>Lang.OPL.Algebra gives the algebraic representation of wirings/propegators</li>
+<li>Similar to what Haskell arrows would look like with 'arr' replaced by swap/dup/assoc</li>
+<li>Binderless, shallow embedding; not planning on developing further</li>
+<li>Lang.OPL.AlgebraMorphism gives the algebraic representation of wiring diagrams</li>
+<li>Morphisms in the whatever category Lang.OPL.Algebra lives in...</li>
+<li>Binderless shallow embedding; also not planning on developing further</li>
+<li>Lang.OPL.Calculus gives a calculus with binders for wiring</li>
+<li>Deep embedding</li>
+<li>Very close to the surface syntax of Haskell arrows</li>
+<li>Notable differences with Haskell arrows are:
+<ul>
+<li>no arr</li>
+<li>no desugaring to binderless form</li>
+<li>a proper type system</li>
+</ul></li>
+<li>Example syntax is given in the source file</li>
+<li>Lang.OPL.Denotation gives the set/category-theoretic formulation of wiring diagrams (morphisms)</li>
+<li>Deep embedding</li>
+<li>Intended to be as close as possible to how David Spivak sees things, while coinciding with the above three languages (I claim)</li>
+<li>Example syntax is given in the source file</li>
+<li>HelloWorld files are simple WxHaskell programs I haven't managed to get working yet...</li>
+</ul>

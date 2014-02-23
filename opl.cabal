@@ -1,0 +1,63 @@
+author:              David Darais
+build-type:          Simple
+cabal-version:       >= 1.10
+category:            Language
+extra-source-files:  README.md
+license-file:        LICENSE
+license:             CCPL
+maintainer:          david.darais@gmail.com
+name:                opl
+synopsis:            Operad Programming Language
+version:             0.1.0.0
+
+library
+  build-depends:       base == 4.6.*
+                     , parsec == 3.1.*
+                     , text == 1.1.*
+                     , data-lens-template == 2.1.*
+                     , darais-fp == 0.1.*
+                     , mtl == 2.1.*
+                     , ansi-terminal == 0.6.*
+  default-extensions:  FlexibleContexts
+                     , StandaloneDeriving
+                     , TemplateHaskell
+                     , ConstraintKinds
+                     , TupleSections
+                     , GeneralizedNewtypeDeriving
+                     , TypeFamilies
+                     , OverloadedStrings
+                     , InstanceSigs
+                     , ScopedTypeVariables
+  default-language:    Haskell2010
+  exposed-modules:     Lang.OPL.Lexer
+                       Lang.OPL.Parser
+                     , Lang.OPL.Syntax
+                     , Lang.OPL.TypeChecker
+                     , Lang.OPL.TypeCheckMonad
+                     , Lang.OPL.Annotated
+  other-modules:       Util.Parsec
+                     , Util.Either
+  hs-source-dirs:      src
+  
+executable opl
+  build-depends:       base == 4.6.*
+                     , opl == 0.1.*
+                     , parsec == 3.1.*
+                     , text == 1.1.*
+                     , data-lens-template == 2.1.*
+                     , darais-fp == 0.1.*
+                     , mtl == 2.1.*
+                     , ansi-terminal == 0.6.*
+  default-extensions:  FlexibleContexts
+                     , StandaloneDeriving
+                     , TemplateHaskell
+                     , ConstraintKinds
+                     , TupleSections
+                     , GeneralizedNewtypeDeriving
+                     , TypeFamilies
+                     , OverloadedStrings
+                     , InstanceSigs
+                     , ScopedTypeVariables
+  default-language:    Haskell2010
+  hs-source-dirs:      src
+  main-is:             Lang/OPL/Main.hs
