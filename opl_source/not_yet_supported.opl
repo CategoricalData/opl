@@ -1,8 +1,0 @@
-#| not yet supported
-wiring diagram G with
-  param x : box with inputs x:int outputs a:int end with inputs x <- y.a
-  result y : box with inputs x:int outputs a:int end with outputs a <- x.x
-end
-|#
-
-

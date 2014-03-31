@@ -18,6 +18,7 @@ library
                      , darais-fp == 0.1.*
                      , mtl == 2.1.*
                      , ansi-terminal == 0.6.*
+                     , containers == 0.5.*
   default-extensions:  FlexibleContexts
                      , StandaloneDeriving
                      , TemplateHaskell
@@ -49,6 +50,7 @@ executable opl
                      , darais-fp == 0.1.*
                      , mtl == 2.1.*
                      , ansi-terminal == 0.6.*
+                     , containers == 0.5.*
   default-extensions:  FlexibleContexts
                      , StandaloneDeriving
                      , TemplateHaskell

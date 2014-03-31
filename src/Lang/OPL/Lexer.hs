@@ -25,26 +25,41 @@ data Token =
 
 punctuation :: [String]
 punctuation = 
-  [ ":"
+  [ "("
+  , ")"
   , ","
+  , "->"
+  , ":"
+  , ":="
   , "<-"
+  , "=>"
+  , "=[]="
+  , "@"
+  , "["
+  , "]"
+  , "_"
   ]
 
 keywords :: [String]
 keywords =
-  [ "as"
+  [ "algebra"
+  , "all"
+  , "apply"
   , "box"
-  , "composition"
-  , "diagram"
+  , "define"
   , "end"
-  , "export"
   , "external"
-  , "input"
+  , "import"
   , "internal"
-  , "output"
-  , "w.d."
+  , "module"
+  , "none"
+  , "only"
+  , "plug"
+  , "provide"
+  , "qualified"
+  , "require"
+  , "where"
   , "wiring"
-  , "with"
   ]
 
 commentLeader :: String
@@ -115,7 +130,7 @@ tokenizeKeyword = do
 tokenizeSymbol :: Parser String
 tokenizeSymbol = do
   x <- P.letter `mplus` P.oneOf "_"
-  xs <- P.many $ P.alphaNum `mplus` P.oneOf "_"
+  xs <- P.many $ P.alphaNum `mplus` P.oneOf "_'"
   return $ x:xs
 
 -------------------- Paths --------------------
@@ -127,8 +142,8 @@ tokenizePath = do
     [ do
         P.char '.'
         p <- tokenizePath
-        return $ s :.: p
-    , return $ SingletonPath s
+        return $ Name s :.: p
+    , return $ SingletonPath $ Name s
     ]
 
 -------------------- Main --------------------

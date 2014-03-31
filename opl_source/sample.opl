@@ -1,26 +1,42 @@
-box B with
-  input  x : int , y : bool
-  output a : int , b : bool
+module
+  require
+    algebra prop
+    define foo : prop @ A
+  import lib1 only box A
+  import lib2 
+    apply box boxy := A
+    only box B
+  import lib3 qualified apply
+    algebra X := prop
+  provide
+    define P : prop @ A
+where
+
+module X := module
+  import lib3
+    apply define foo := A
+    only box B
+where
+  box Foo
+  box Foo := int =[]= bool
 end
 
-box B2 with
-  input  x : int
-  output a : int
+box A := int bool =[]= int bool
+
+define W : A A -> int bool =[]= int bool
+define W := wiring
+  internal
+    i1 : (int bool =[]= int bool)[x y =[]= a b] plug x <- i2.a, y <- e.y
+    i2 : A[x y =[]= a b] plug x <- e.x, y <- i2.b
+  external
+    e : A[x y =[]= a b] plug a <- i1.a, b <- i2.b
 end
 
-wiring diagram D with
-  internal box i1 : B with input  x <- i2.a , y <- e.y
-  internal box i2 : B with input  x <- e.x  , y <- i1.b
-  external box e  : B with output a <- i1.a , b <- i2.b
-end
+define C : A A A A -> A
+define C := W[l r => r l] <- W W
 
-wiring diagram D2 with
-  internal box i : B with input x <- e.x, y <- i.b
-  external box e : B2 with output a <- i.a
-end
+define P : prop @ A
+define P := prop C <- foo foo foo foo
 
-wiring composition C with
-  external w.d. D
-  internal w.d. i1 <- D export internal box i1 as i11 , i2 as i12
-  internal w.d. i2 <- D export internal box i1 as i21 , i2 as i22
-end
+define UP := prop C <- foo _ foo _
+define P' := prop C <- foo _ foo _ <- foo foo
