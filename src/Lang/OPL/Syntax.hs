@@ -4,56 +4,10 @@ import Prelude ()
 import FP
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Lang.OPL.Annotated
-import Text.Parsec (SourcePos)
 import qualified FP.Pretty as P
-
----------- Names and Paths ----------
-
-type NameAnn = SourcePos
-
-newtype Name = Name { nameVal :: String }
-  deriving (Eq, Ord, Show)
-instance Pretty Name where
-  pretty = P.string . nameVal
-
-type AName = Annotated NameAnn Name
-
-data Path = SingletonPath Name | Name :.: Path
-  deriving (Eq, Ord, Show)
-instance Pretty Path where
-  pretty (SingletonPath n) = pretty n
-  pretty (n :.: p) = do
-    pretty n
-    P.punctuation $ P.string "."
-    pretty p
-
-pathRoot :: Path -> Name
-pathRoot (SingletonPath n) = n
-pathRoot (n :.: _) = n
-
-type APath = Annotated NameAnn Path
+import Lang.OPL.Common
 
 ---------- Boxes ----------
-
-newtype PlugType = PlugType AName
-  deriving (Eq, Ord, Show)
-instance Pretty PlugType where
-  pretty (PlugType n) = pretty n
-
-data BoxArrow = BoxArrow
-  { boxArrowInputs :: [PlugType]
-  , boxArrowOutputs :: [PlugType]
-  } deriving (Eq, Ord, Show)
-instance Pretty BoxArrow where
-  pretty (BoxArrow ins outs) = 
-    P.guardLevel (level "=[]=") 
-    $ P.hsep 
-    $ concat
-      [ map pretty ins
-      , return $ P.punctuation $ P.string "=[]="
-      , map pretty outs
-      ]
 
 data Box =
     VarBox AName
@@ -80,36 +34,20 @@ instance Pretty WiringArrow where
       , return $ pretty out
       ]
 data WiringType = 
-    BoxWiringType Box
+    VarWiringType AName
+  | LiftWiringType AName WiringType
+  | BoxWiringType Box
   | ArrowWiringType WiringArrow
   deriving (Eq, Ord, Show)
 instance Pretty WiringType where
+  pretty (VarWiringType n) = pretty n
+  pretty (LiftWiringType n wt) = P.hsep
+    [ pretty n
+    , P.punctuation $ P.string "@"
+    , pretty wt
+    ]
   pretty (BoxWiringType b) = pretty b
   pretty (ArrowWiringType a) = pretty a
-
-data BoxBinder = BoxBinder
-  { boxBinderInputs :: [AName]
-  , boxBinderOutputs :: [AName]
-  } deriving (Eq, Ord, Show)
-instance Pretty BoxBinder where
-  pretty (BoxBinder ins outs) =
-    P.hsep $ concat
-      [ map pretty ins
-      , return $ P.punctuation $ P.string "=[]="
-      , map pretty outs
-      ]
-
-data Plug = Plug
-  { plugName :: AName
-  , plugPath :: APath
-  } deriving (Eq, Ord, Show)
-instance Pretty Plug where
-  pretty (Plug n p) =
-    P.hsep
-      [ pretty n
-      , P.punctuation $ P.string "<-"
-      , pretty p
-      ]
 
 data Wiring = Wiring
   { wiringName :: AName
@@ -130,7 +68,7 @@ instance Pretty Wiring where
       , P.keyword $ P.string "plug"
       , do
           s <- askView P.styleOptionsL
-          localViewSet P.styleOptionsL (P.StyleOptions P.PreAlignStyle P.NoBuffer 2) $
+          localViewSet P.styleOptionsL (P.StyleOptions P.PostStyle P.NoBuffer 2) $
             P.encloseSepDropIndent "" "" ", " $ map (localViewSet P.styleOptionsL s . pretty) ps
       ]
 
@@ -141,69 +79,119 @@ data WiringDiagram = WiringDiagram
 instance Pretty WiringDiagram where
   pretty (WiringDiagram ins out) = P.group $ do
     P.keyword $ P.string "wiring"
-    P.dropIndent $
-      P.vsep $ map P.group
-        [ do
-            P.keyword $ P.string "internal"
-            P.dropIndent $ do
-              P.vsep $ map pretty ins
-        , do
-            P.keyword $ P.string "external"
-            P.dropIndent $ pretty out
-        ]
-    P.hardLine
-    P.keyword $ P.string "end"
+    P.vsep $
+      [ P.dropIndent $
+          P.vsep $ map P.group
+            [ do
+                P.keyword $ P.string "internal"
+                P.dropIndent $ do
+                  P.vsep $ map pretty ins
+            , do
+                P.keyword $ P.string "external"
+                P.dropIndent $ pretty out
+            ]
+      , P.keyword $ P.string "end"
+      ]
 
----------- Expressions ----------
+newtype Underscored a = Underscored { unUnderscored :: Maybe a }
+instance (Pretty a) => Pretty (Underscored a) where
+  pretty (Underscored Nothing) = P.string "_"
+  pretty (Underscored (Just x)) = pretty x
 
-data DefineType =
-    WiringDefineType WiringType
-  | LiftDefineType AName WiringType
+data WiringExp =
+    VarWiringExp AName
+  | LiftWiringExp AName WiringExp
+  | DiagramWiringExp WiringDiagram
+  | RenamingWiringExp Renaming WiringExp
+  | ApplyWiringExp WiringExp [Maybe WiringExp]
   deriving (Eq, Ord, Show)
-instance Pretty DefineType where
-  pretty (WiringDefineType wt) = pretty wt
-  pretty (LiftDefineType n wt) = P.hsep
-    [ pretty n
-    , P.punctuation $ P.string "@"
-    , pretty wt
-    ]
-
-data Renaming = Renaming
-  { renamingFrom :: [AName]
-  , renamingTo :: [AName]
-  } deriving (Eq, Ord, Show)
-instance Pretty Renaming where
-  pretty (Renaming from to) = P.hsep $ concat
-    [ map pretty from
-    , return $ P.punctuation $ P.string "=>"
-    , map pretty to
-    ]
-
-data DefineExp =
-    VarDefineExp AName
-  | DiagramDefineExp WiringDiagram
-  | LiftDefineExp AName DefineExp
-  | RenamingDefineExp DefineExp Renaming
-  | ApplyDefineExp DefineExp [Maybe DefineExp]
-  deriving (Eq, Ord, Show)
-instance Pretty DefineExp where
+instance Pretty WiringExp where
   precLattice Proxy = compile [(" ", "<-")]
-  pretty (VarDefineExp n) = pretty n
-  pretty (DiagramDefineExp wd) = pretty wd
-  pretty (LiftDefineExp n e) = P.guardLevel (level " ") $ P.hsep
+  pretty (VarWiringExp n) = pretty n
+  pretty (DiagramWiringExp wd) = pretty wd
+  pretty (LiftWiringExp n e) = P.guardLevel (level " ") $ P.hsep
     [ pretty n
     , pretty e
     ]
-  pretty (RenamingDefineExp e r) = do
+  pretty (RenamingWiringExp e r) = do
     pretty e
     P.punctuation $ P.string "["
     pretty r
     P.punctuation $ P.string "]"
-  pretty (ApplyDefineExp e eMs) = P.guardLevel (level "<-") $ P.hsep $ concat
+  pretty (ApplyWiringExp e eMs) = P.guardLevel (level "<-") $ P.hsep $ concat
     [ return $ pretty e
     , return $ P.punctuation $ P.string "<-"
-    , map (P.atLevel BotLevel . maybe (P.punctuation $ P.string "_") pretty) eMs
+    , map (P.atLevel BotLevel . pretty . Underscored) eMs
     ]
+
+---------- Top Level Definitions ----------
+
+data Decl =
+    AlgebraDecl AName
+  | ModuleDecl AName
+  | BoxDecl AName
+  | WiringDecl AName WiringType
+  deriving (Eq, Ord, Show)
+instance Pretty Decl where
+  pretty (AlgebraDecl n) = P.hsep
+    [ P.keyword $ P.string "algebra"
+    , pretty n
+    ]
+  pretty (ModuleDecl n) = P.hsep
+    [ P.keyword $ P.string "module"
+    , pretty n
+    ]
+  pretty (BoxDecl n) = P.hsep
+    [ P.keyword $ P.string "box"
+    , pretty n
+    ]
+  pretty (WiringDecl n t) = P.hsep
+    [ P.keyword $ P.string "define"
+    , pretty n
+    , P.punctuation $ P.string ":"
+    , pretty t
+    ]
+
+data Def =
+    AlgebraDef AName AName
+  | ModuleDef AName Module
+  | BoxDef AName Box
+  | WiringDef AName WiringExp
+  deriving (Eq, Ord, Show)
+instance Pretty Def where
+  pretty (AlgebraDef n a) = P.hsep
+    [ P.keyword $ P.string "algebra"
+    , pretty n
+    , P.punctuation $ P.string ":="
+    , pretty a
+    ]
+  pretty (ModuleDef n m) = do
+    P.hsep
+      [ P.keyword $ P.string "module"
+      , pretty n
+      , P.punctuation $ P.string ":="
+      , pretty m
+      ]
+  pretty (BoxDef n b) = P.hsep
+    [ P.keyword $ P.string "box"
+    , pretty n
+    , P.punctuation $ P.string ":="
+    , pretty b
+    ]
+  pretty (WiringDef n e) = P.hsep
+    [ P.keyword $ P.string "define"
+    , pretty n
+    , P.punctuation $ P.string ":="
+    , pretty e
+    ]
+
+data Statement =
+    DeclStatement Decl 
+  | DefStatement Def
+  deriving (Eq, Ord, Show)
+instance Pretty Statement where
+  pretty (DeclStatement d) = pretty d
+  pretty (DefStatement d) = pretty d
 
 ---------- Modules ----------
 
@@ -240,7 +228,7 @@ data Provides =
 instance Pretty Provides where
   pretty AllProvides = P.keyword $ P.string "all"
   pretty NoneProvides = P.keyword $ P.string "none"
-  pretty (ExplicitProvides ds) = P.dropIndent $ P.vsep $ map pretty ds
+  pretty (ExplicitProvides ds) = P.group $ P.dropIndent $ P.vsep $ map pretty ds
 
 data Module = Module
   { moduleRequires :: [Decl]
@@ -252,95 +240,47 @@ instance Pretty Module where
   precLattice Proxy =
     Map.unionsWith Set.union
       [ precLattice (proxy :: Proxy WiringArrow)
-      , precLattice (proxy :: Proxy DefineExp)
+      , precLattice (proxy :: Proxy WiringExp)
       ]
   pretty (Module rs is pM ss) = P.group $ do
-    P.keyword $ P.string "module"
-    P.dropIndent $
-      P.vsep $ concat
-        [ if null rs
-            then mzero
-            else return $ P.group $ do
-              P.keyword $ P.string "require"
-              P.dropIndent $
-                P.vsep $ map pretty rs
-        , map pretty is
-        , flip (maybe mzero) pM $ \ p -> return $ P.group $ do
-            P.keyword $ P.string "provide"
-            pretty p
-        ]
-    P.hardLine
-    P.keyword $ P.string "where"
-    P.dropIndent $ P.vsep $ map pretty ss
+    case (rs, is, pM) of
+      ([], [], Nothing) ->
+        P.dropIndent $ P.vsep $ map pretty ss
+      _ -> do
+        P.dropIndent $ P.vsep $ concat
+          [ if null rs then mzero else 
+              return $ P.group $ do
+                P.keyword $ P.string "require"
+                P.dropIndent $ P.vsep $ map pretty rs
+          , map pretty is
+          , flip (maybe mzero) pM $ \ p -> return $ P.hsep
+              [ P.keyword $ P.string "provide"
+              , pretty p
+              ]
+          ]
+        P.hardLine
+        P.keyword $ P.string "where"
+        P.dropIndent $ P.vsep $ map pretty ss
     P.hardLine
     P.keyword $ P.string "end"
 
----------- Top Level Definitions ----------
-
-data Decl =
-    AlgebraDecl AName
-  | BoxDecl AName
-  | ModuleDecl AName
-  | DefineDecl AName DefineType
+newtype TLModule = TLModule Module
   deriving (Eq, Ord, Show)
-instance Pretty Decl where
-  pretty (AlgebraDecl n) = P.hsep
-    [ P.keyword $ P.string "algebra"
-    , pretty n
-    ]
-  pretty (BoxDecl n) = P.hsep
-    [ P.keyword $ P.string "box"
-    , pretty n
-    ]
-  pretty (ModuleDecl n) = P.hsep
-    [ P.keyword $ P.string "module"
-    , pretty n
-    ]
-  pretty (DefineDecl n t) = P.hsep
-    [ P.keyword $ P.string "define"
-    , pretty n
-    , P.punctuation $ P.string ":"
-    , pretty t
-    ]
-
-data Def =
-    AlgebraDef AName AName
-  | BoxDef AName Box
-  | ModuleDef AName Module
-  | DefineDef AName DefineExp
-  deriving (Eq, Ord, Show)
-instance Pretty Def where
-  pretty (AlgebraDef n a) = P.hsep
-    [ P.keyword $ P.string "algebra"
-    , pretty n
-    , P.punctuation $ P.string ":="
-    , pretty a
-    ]
-  pretty (BoxDef n b) = P.hsep
-    [ P.keyword $ P.string "box"
-    , pretty n
-    , P.punctuation $ P.string ":="
-    , pretty b
-    ]
-  pretty (ModuleDef n m) = do
-    P.hsep
-      [ P.keyword $ P.string "module"
-      , pretty n
-      , P.punctuation $ P.string ":="
-      , pretty m
-      ]
-  pretty (DefineDef n e) = P.hsep
-    [ P.keyword $ P.string "define"
-    , pretty n
-    , P.punctuation $ P.string ":="
-    , pretty e
-    ]
-
-data Statement =
-    DeclStatement Decl 
-  | DefStatement Def
-  deriving (Eq, Ord, Show)
-instance Pretty Statement where
-  pretty (DeclStatement d) = pretty d
-  pretty (DefStatement d) = pretty d
+instance (Pretty TLModule) where
+  pretty (TLModule (Module rs is pM ss)) = P.vsep $
+    case (rs, is, pM) of
+      ([], [], Nothing) -> map pretty ss
+      _ -> concat
+        [ if null rs then mzero else
+            return $ P.group $ do
+              P.keyword $ P.string "require"
+              P.dropIndent $ P.vsep $ map pretty rs
+        , map pretty is
+        , flip (maybe mzero) pM $ \ p -> return $ P.hsep
+            [ P.keyword $ P.string "provide"
+            , pretty p
+            ]
+        , return $ P.keyword $ P.string "where"
+        , map pretty ss
+        ]
 

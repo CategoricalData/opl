@@ -1,0 +1,31 @@
+box A := int bool =[]= int bool
+
+define W : A A -> A
+define W := wiring
+  internal
+    i1 : A[a b =[]= x y] plug a <- i1.x, b <- o.b
+    i2 : A[a b =[]= x y] plug a <- o.a,  b <- i2.y
+  external
+    o : A[a b =[]= x y] plug x <- i2.x, y <- i1.y
+end
+
+define X1 : A A A A -> A
+define X1 := W[a b => b a] <- W W
+
+define X2 : A A A -> A
+define X2 := W <- W _
+
+define X3 : A A A -> A
+define X3 := W <- _ W
+
+define L : prop @ A A -> A
+define L := prop W
+
+define L1 : prop @ A A A A -> A
+define L1 := L[x y => y x] <- L L
+
+define L2 : prop @ A A A -> A
+define L2 := L <- _ L
+
+define L3 : prop @ A A A -> A
+define L3 := L <- L _

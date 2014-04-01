@@ -8,12 +8,13 @@ import Control.Monad
 import Data.Text (Text)
 import Lang.OPL.Lexer
 import Lang.OPL.Syntax
+import Lang.OPL.Common
 import Text.Parsec (ParsecT, ParseError, SourcePos, SourceName)
 import qualified Text.Parsec as P
 
 data Env = Env
-  { _precDL :: DumbLattice
-  , _precLevel :: Level
+  { _precDLL :: DumbLattice
+  , _precLevelL :: Level
   } deriving (Eq, Ord, Show)
 makeLens ''Env
 
@@ -24,12 +25,12 @@ type instance MEnv Parser = Env
 
 lteM :: Level -> Parser Bool
 lteM l = do
-  dl <- askView precDL
-  cl <- askView precLevel
+  dl <- askView precDLL
+  cl <- askView precLevelL
   return $ dlLte dl l cl
 
 atLevel :: Level -> Parser a -> Parser a
-atLevel = localViewSet precLevel
+atLevel = localViewSet precLevelL
 
 guardLevel :: Level -> Parser a -> Parser a
 guardLevel l aM = do
@@ -112,8 +113,14 @@ wiringArrow = guardLevelParen (level "->") $ do
 
 wiringType :: Parser WiringType
 wiringType = msum
-  [ P.try $ liftM ArrowWiringType wiringArrow
-  , liftM BoxWiringType box
+  [ P.try $ do
+      n <- aname
+      pun "@"
+      wt <- wiringType
+      return $ LiftWiringType n wt
+  , P.try $ liftM ArrowWiringType wiringArrow
+  , P.try $ liftM BoxWiringType box
+  , liftM VarWiringType aname
   ]
 
 boxBinder :: Parser BoxBinder
@@ -152,18 +159,6 @@ wiringDiagram = do
   key "end"
   return $ WiringDiagram ins out
 
--------------------- Expressions --------------------
-
-defineType :: Parser DefineType
-defineType = msum
-  [ P.try $ do
-      n <- aname
-      pun "@"
-      wt <- wiringType
-      return $ LiftDefineType n wt
-  , liftM WiringDefineType wiringType
-  ]
-
 renaming :: Parser Renaming
 renaming = do
   from <- P.many aname
@@ -171,49 +166,105 @@ renaming = do
   to <- P.many aname
   return $ Renaming from to
 
-defineExpFlat :: Parser DefineExp
-defineExpFlat = msum
-  [ liftM DiagramDefineExp wiringDiagram
+wiringExpFlat :: Parser WiringExp
+wiringExpFlat = msum
+  [ liftM DiagramWiringExp wiringDiagram
   , P.try $ guardLevelParen (level " ") $ do
       n <- aname
-      e <- defineExp
-      return $ LiftDefineExp n e
-  , liftM VarDefineExp aname
+      e <- wiringExp
+      return $ LiftWiringExp n e
+  , liftM VarWiringExp aname
   ]
 
-defineExpPost :: Parser DefineExp
-defineExpPost = msum
+wiringExpPost :: Parser WiringExp
+wiringExpPost = msum
   [ P.try $ do
-      e <- atLevel BotLevel defineExpFlat
+      e <- atLevel BotLevel wiringExpFlat
       pun "["
       r <- renaming
       pun "]"
-      return $ RenamingDefineExp e r
-  , defineExpFlat
+      return $ RenamingWiringExp r e
+  , wiringExpFlat
   ]
 
-maybeDefineExp :: Parser (Maybe DefineExp)
+maybeDefineExp :: Parser (Maybe WiringExp)
 maybeDefineExp = msum
   [ pun "_" >> return Nothing
-  , liftM Just defineExp
+  , liftM Just wiringExp
   ]
 
-defineExpChain :: DefineExp -> Parser DefineExp
-defineExpChain e = msum
+wiringExpChain :: WiringExp -> Parser WiringExp
+wiringExpChain e = msum
   [ do
       pun "<-"
       es <- P.many $ atLevel BotLevel maybeDefineExp
-      defineExpChain $ ApplyDefineExp e es
+      wiringExpChain $ ApplyWiringExp e es
   , return e
   ]
 
-defineExp :: Parser DefineExp
-defineExp = msum
-  [ parens defineExp
+wiringExp :: Parser WiringExp
+wiringExp = msum
+  [ parens wiringExp
   , P.try $ guardLevelParen (level "<-") $ do
-      e <- defineExpPost
-      defineExpChain e
-  , defineExpPost
+      e <- wiringExpPost
+      wiringExpChain e
+  , wiringExpPost
+  ]
+
+-------------------- Statements --------------------
+
+decl :: Parser Decl
+decl = msum
+  [ do
+      key "algebra"
+      liftM AlgebraDecl aname
+  , do
+      key "box"
+      liftM BoxDecl aname
+  , do
+      key "module"
+      liftM ModuleDecl aname
+  , do
+      key "define"
+      n <- aname
+      pun ":"
+      t <- wiringType
+      return $ WiringDecl n t
+  ]
+
+def :: Parser Def
+def = msum
+  [ do
+      key "algebra"
+      n <- aname
+      pun ":="
+      a <- aname
+      return $ AlgebraDef n a
+  , do
+      key "box"
+      n <- aname
+      pun ":="
+      b <- box
+      return $ BoxDef n b
+  , do 
+      key "module"
+      n <- aname
+      pun ":="
+      m <- moduleGuts
+      key "end"
+      return $ ModuleDef n m
+  , do
+      key "define"
+      n <- aname
+      pun ":="
+      e <- wiringExp
+      return $ WiringDef n e
+  ]
+
+statement :: Parser Statement
+statement = msum
+  [ P.try $ liftM DefStatement def
+  , liftM DeclStatement decl
   ]
 
 -------------------- Modules --------------------
@@ -242,78 +293,23 @@ provides = msum
   
 moduleGuts :: Parser Module
 moduleGuts = do
-  key "module"
-  ds <- P.option [] $ do
-    key "require"
-    P.many decl
-  is <- P.many pimport
-  ps <- P.option Nothing $ do
-    key "provide"
-    liftM Just provides
-  key "where"
+  (ds, is, ps) <- P.option ([], [], Nothing) $ do
+    ds <- P.option [] $ do
+      key "require"
+      P.many decl
+    is <- P.many pimport
+    ps <- P.option Nothing $ do
+      key "provide"
+      liftM Just provides
+    key "where"
+    return (ds, is, ps)
   ss <- P.many statement
   return $ Module ds is ps ss
 
--------------------- Statements --------------------
-
-decl :: Parser Decl
-decl = msum
-  [ do
-      key "algebra"
-      liftM AlgebraDecl aname
-  , do
-      key "box"
-      liftM BoxDecl aname
-  , do
-      key "module"
-      liftM ModuleDecl aname
-  , do
-      key "define"
-      n <- aname
-      pun ":"
-      t <- defineType
-      return $ DefineDecl n t
-  ]
-
-def :: Parser Def
-def = msum
-  [ do
-      key "algebra"
-      n <- aname
-      pun ":="
-      a <- aname
-      return $ AlgebraDef n a
-  , do
-      key "box"
-      n <- aname
-      pun ":="
-      b <- box
-      return $ BoxDef n b
-  , do 
-      key "module"
-      n <- aname
-      pun ":="
-      m <- moduleGuts
-      key "end"
-      return $ ModuleDef n m
-  , do
-      key "define"
-      n <- aname
-      pun ":="
-      e <- defineExp
-      return $ DefineDef n e
-  ]
-
-statement :: Parser Statement
-statement = msum
-  [ P.try $ liftM DefStatement def
-  , liftM DeclStatement decl
-  ]
-
 -------------------- Main --------------------
 
-topLevel :: Parser Module
-topLevel = moduleGuts <* P.eof
+topLevel :: Parser TLModule
+topLevel = liftM TLModule moduleGuts <* P.eof
 
 parse :: Parser a -> DumbLattice -> SourceName -> [AnnToken] -> Either ParseError a
 parse p dl name = flip runReader (Env dl TopLevel) . P.runParserT p () name
@@ -321,5 +317,5 @@ parse p dl name = flip runReader (Env dl TopLevel) . P.runParserT p () name
 parseConstraints :: DumbLattice
 parseConstraints = compile [ (" ", "<-"), ("=[]=", "->") ]
 
-runParse :: String -> Text -> Either ParseError Module
+runParse :: String -> Text -> Either ParseError TLModule
 runParse name = P.parse tokenize name >=> parse topLevel parseConstraints name

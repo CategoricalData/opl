@@ -1,24 +1,28 @@
-module
-  require
-    algebra prop
-    define foo : prop @ A
-  import lib1 only box A
-  import lib2 
-    apply box boxy := A
-    only box B
-  import lib3 qualified apply
-    algebra X := prop
-  provide
-    define P : prop @ A
+require
+  algebra prop
+  define foo : prop @ A
+import lib1 only box A
+import lib2 
+  apply box boxy := A
+  only box B
+import lib3 qualified apply
+  algebra X := prop
+provide
+  define P : prop @ A
 where
 
-module X := module
+module X :=
   import lib3
     apply define foo := A
     only box B
-where
-  box Foo
-  box Foo := int =[]= bool
+  where
+    box Foo
+    box Foo := int =[]= bool
+end
+
+module Y :=
+  box Bar
+  box Bar := bool bool =[]= bool bool
 end
 
 box A := int bool =[]= int bool

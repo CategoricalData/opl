@@ -7,6 +7,7 @@ import Control.Applicative
 import Data.Function
 import Data.List
 import Lang.OPL.Syntax
+import Lang.OPL.Common
 import Text.Parsec (SourcePos, ParseError)
 import Text.Parsec.Text (Parser)
 import qualified Text.Parsec as P
